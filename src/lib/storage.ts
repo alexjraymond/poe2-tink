@@ -117,3 +117,35 @@ export async function deleteBookmark(id: string): Promise<void> {
     bookmarks: state.bookmarks.filter((b) => b.id !== id),
   });
 }
+
+// ── Reordering ────────────────────────────────────────────────────────────
+// Callers pass the full list of ids in their desired order; we rewrite each
+// item's `order` to its index. Rewriting the whole list (rather than nudging
+// individual values) keeps ordering dense and avoids drift over many moves.
+
+export async function reorderFolders(orderedIds: string[]): Promise<void> {
+  const state = await getState();
+  const indexById = new Map(orderedIds.map((id, index) => [id, index]));
+  await setState({
+    ...state,
+    folders: state.folders.map((f) =>
+      indexById.has(f.id) ? { ...f, order: indexById.get(f.id)! } : f
+    ),
+  });
+}
+
+export async function reorderBookmarks(
+  folderId: string | null,
+  orderedIds: string[]
+): Promise<void> {
+  const state = await getState();
+  const indexById = new Map(orderedIds.map((id, index) => [id, index]));
+  await setState({
+    ...state,
+    bookmarks: state.bookmarks.map((b) =>
+      b.folderId === folderId && indexById.has(b.id)
+        ? { ...b, order: indexById.get(b.id)! }
+        : b
+    ),
+  });
+}
