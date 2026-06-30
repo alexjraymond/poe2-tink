@@ -6,6 +6,8 @@ import {
   deleteBookmark,
   deleteFolder,
   moveBookmark,
+  renameBookmark,
+  renameFolder,
   reorderFolders,
 } from "../../lib/storage";
 import { buildTradeUrl } from "../../lib/trade-location";
@@ -72,6 +74,12 @@ export function BookmarksPanel({ state, currentLocation }: Props) {
     ({ folderId: string | null } & DropTarget) | null
   >(null);
   const [folderHover, setFolderHover] = useState<{ folderId: string | null } | null>(
+    null
+  );
+
+  // Which item (if any) is currently being renamed inline.
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editingBookmarkId, setEditingBookmarkId] = useState<string | null>(
     null
   );
 
@@ -166,7 +174,7 @@ export function BookmarksPanel({ state, currentLocation }: Props) {
               className={`tink-bookmark tink-draggable ${
                 isDragging ? "tink-dragging" : ""
               } ${line}`}
-              draggable
+              draggable={editingBookmarkId !== bookmark.id}
               onDragStart={(e) => {
                 setDrag({ type: "bookmark", id: bookmark.id, from: folderId });
                 e.dataTransfer.effectAllowed = "move";
@@ -190,13 +198,32 @@ export function BookmarksPanel({ state, currentLocation }: Props) {
               <span className="tink-grip" aria-hidden="true">
                 ⠿
               </span>
+              {editingBookmarkId === bookmark.id ? (
+                <RenameInput
+                  className="tink-rename tink-rename-bookmark"
+                  initial={bookmark.title}
+                  onCommit={(t) => {
+                    void renameBookmark(bookmark.id, t);
+                    setEditingBookmarkId(null);
+                  }}
+                  onCancel={() => setEditingBookmarkId(null)}
+                />
+              ) : (
+                <button
+                  className="tink-bookmark-open"
+                  title={`${bookmark.league} · ${bookmark.kind}`}
+                  onClick={() => openBookmark(bookmark)}
+                >
+                  <span className="tink-bookmark-title">{bookmark.title}</span>
+                  <span className="tink-bookmark-meta">{bookmark.league}</span>
+                </button>
+              )}
               <button
-                className="tink-bookmark-open"
-                title={`${bookmark.league} · ${bookmark.kind}`}
-                onClick={() => openBookmark(bookmark)}
+                className="tink-icon-btn"
+                title="Rename bookmark"
+                onClick={() => setEditingBookmarkId(bookmark.id)}
               >
-                <span className="tink-bookmark-title">{bookmark.title}</span>
-                <span className="tink-bookmark-meta">{bookmark.league}</span>
+                ✎
               </button>
               <button
                 className="tink-icon-btn"
@@ -249,7 +276,7 @@ export function BookmarksPanel({ state, currentLocation }: Props) {
                 className={`tink-folder-head tink-draggable ${
                   dragging ? "tink-dragging" : ""
                 } ${reorderLine} ${receiving ? "tink-folder-receive" : ""}`}
-                draggable
+                draggable={editingFolderId !== folder.id}
                 onDragStart={(e) => {
                   setDrag({ type: "folder", id: folder.id });
                   e.dataTransfer.effectAllowed = "move";
@@ -277,7 +304,32 @@ export function BookmarksPanel({ state, currentLocation }: Props) {
                 <span className="tink-grip" aria-hidden="true">
                   ⠿
                 </span>
-                <span className="tink-folder-title">{folder.title}</span>
+                {editingFolderId === folder.id ? (
+                  <RenameInput
+                    className="tink-rename"
+                    initial={folder.title}
+                    onCommit={(t) => {
+                      void renameFolder(folder.id, t);
+                      setEditingFolderId(null);
+                    }}
+                    onCancel={() => setEditingFolderId(null)}
+                  />
+                ) : (
+                  <span
+                    className="tink-folder-title"
+                    title="Double-click to rename"
+                    onDoubleClick={() => setEditingFolderId(folder.id)}
+                  >
+                    {folder.title}
+                  </span>
+                )}
+                <button
+                  className="tink-icon-btn"
+                  title="Rename folder"
+                  onClick={() => setEditingFolderId(folder.id)}
+                >
+                  ✎
+                </button>
                 <button
                   className="tink-icon-btn"
                   title="Delete folder"
@@ -316,6 +368,53 @@ export function BookmarksPanel({ state, currentLocation }: Props) {
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A small controlled text input for inline renaming.
+ * Commits on Enter or blur, cancels on Escape. Stops mouse events from
+ * bubbling so it doesn't start a drag on its draggable parent.
+ */
+function RenameInput({
+  initial,
+  onCommit,
+  onCancel,
+  className,
+}: {
+  initial: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState(initial);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== initial) onCommit(trimmed);
+    else onCancel();
+  };
+
+  return (
+    <input
+      className={className}
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      onBlur={commit}
+      onFocus={(e) => e.currentTarget.select()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    />
   );
 }
 

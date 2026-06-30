@@ -319,3 +319,29 @@
   color: #c8aa6e;
   box-shadow: inset 0 0 0 1px #c8aa6e;
 }
+
+/* Inline rename */
+.tink-folder-title {
+  cursor: text;
+}
+
+.tink-rename {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  background: #0f0d09;
+  border: 1px solid #c8aa6e;
+  border-radius: 4px;
+  color: #e8d9b5;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.tink-rename:focus {
+  outline: none;
+}
+
+.tink-rename-bookmark {
+  margin: 6px 4px 6px 0;
+}
