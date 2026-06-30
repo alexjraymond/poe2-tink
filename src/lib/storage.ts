@@ -117,3 +117,46 @@ export async function deleteBookmark(id: string): Promise<void> {
     bookmarks: state.bookmarks.filter((b) => b.id !== id),
   });
 }
+
+// ── Reordering ────────────────────────────────────────────────────────────
+// Callers pass the full list of ids in their desired order; we rewrite each
+// item's `order` to its index. Rewriting the whole list (rather than nudging
+// individual values) keeps ordering dense and avoids drift over many moves.
+
+export async function reorderFolders(orderedIds: string[]): Promise<void> {
+  const state = await getState();
+  const indexById = new Map(orderedIds.map((id, index) => [id, index]));
+  await setState({
+    ...state,
+    folders: state.folders.map((f) =>
+      indexById.has(f.id) ? { ...f, order: indexById.get(f.id)! } : f
+    ),
+  });
+}
+
+/**
+ * Move a bookmark into `toFolderId` and apply a new ordering to that folder.
+ * `orderedIds` is the full id list of the destination folder *after* the move
+ * (including the moved bookmark). This single function covers both same-folder
+ * reordering (`toFolderId` equals the current folder) and cross-folder moves.
+ */
+export async function moveBookmark(
+  id: string,
+  toFolderId: string | null,
+  orderedIds: string[]
+): Promise<void> {
+  const state = await getState();
+  const indexById = new Map(orderedIds.map((bid, index) => [bid, index]));
+  await setState({
+    ...state,
+    bookmarks: state.bookmarks.map((b) => {
+      if (b.id === id) {
+        return { ...b, folderId: toFolderId, order: indexById.get(id) ?? b.order };
+      }
+      if (b.folderId === toFolderId && indexById.has(b.id)) {
+        return { ...b, order: indexById.get(b.id)! };
+      }
+      return b;
+    }),
+  });
+}
