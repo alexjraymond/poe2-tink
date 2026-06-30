@@ -26,10 +26,10 @@ export default defineManifest({
   },
   content_scripts: [
     {
-      matches: ["<all_urls>"],
-      js: ["src/content/index.ts"],
+      matches: ["https://www.pathofexile.com/trade2/*"],
+      js: ["src/content/index.tsx"],
       run_at: "document_idle",
     },
   ],
-  permissions: ["storage", "activeTab"],
+  permissions: ["storage"],
 });
