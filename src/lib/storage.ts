@@ -110,6 +110,16 @@ export async function addBookmark(
   return bookmark;
 }
 
+export async function renameBookmark(id: string, title: string): Promise<void> {
+  const state = await getState();
+  await setState({
+    ...state,
+    bookmarks: state.bookmarks.map((b) =>
+      b.id === id ? { ...b, title: title.trim() || b.title } : b
+    ),
+  });
+}
+
 export async function deleteBookmark(id: string): Promise<void> {
   const state = await getState();
   await setState({
